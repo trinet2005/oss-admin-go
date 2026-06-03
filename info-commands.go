@@ -575,23 +575,17 @@ func (adm *AdminClient) GetBucketInfo(ctx context.Context) (map[string]BucketInf
 		return bucketInfo, httpRespToErrorResponse(resp)
 	}
 
-	// 检查响应是否是 gzip 压缩的
 	var reader io.Reader = resp.Body
 	if resp.Header.Get("Content-Encoding") == "gzip" {
-		gzReader, err := gzip.NewReader(resp.Body)
-		if err != nil {
-			return bucketInfo, fmt.Errorf("creating gzip reader failed: %v", err)
+		gzReader, gzErr := gzip.NewReader(resp.Body)
+		if gzErr != nil {
+			return bucketInfo, fmt.Errorf("creating gzip reader failed: %v", gzErr)
 		}
 		defer gzReader.Close()
 		reader = gzReader
-
-		if err = json.NewDecoder(reader).Decode(&bucketInfo); err != nil {
-			return bucketInfo, err
-		}
 	}
 
-	// Unmarshal the server's json response
-	if err = json.NewDecoder(resp.Body).Decode(&bucketInfo); err != nil {
+	if err = json.NewDecoder(reader).Decode(&bucketInfo); err != nil {
 		return bucketInfo, err
 	}
 
